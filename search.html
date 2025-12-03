@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galería de Perros</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+    <header>
+        <h1>Galería de Perros</h1>
+        <nav class="navbar">
+            <ul>
+                <li><a href="index.html">Inicio</a></li>
+                <li><a href="search.html">Galería</a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <main>
+        <section class="form-section">
+            <form id="busqueda-form">
+                <label for="raza">Raza:</label>
+                <select id="raza" name="raza">
+                    <option value="">Selecciona una raza</option>
+                </select>
+
+                <label for="subraza">Subraza:</label>
+                <select id="subraza" name="subraza">
+                    <option value="">Selecciona una subraza</option>
+                </select>
+
+                <label for="cantidad">Cantidad de imágenes:</label>
+                <input type="number" id="cantidad" name="cantidad" min="1" max="50" required>
+
+                <button type="submit">Buscar</button>
+            </form>
+
+            <div class="error" id="mensaje-error"></div>
+        </section>
+
+        <section id="resultados" class="galeria">
+            <!-- Aquí se mostrarán las imágenes -->
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Galería de Perros. Todos los derechos reservados.</p>
+    </footer>
+
+    <!-- Primero jQuery, luego tu script -->
+    <script src="assets/libs/jquery-3.7.1.min.js"></script>
+    <script src="assets/js/main.js"></script>
+</body>
+</html>
