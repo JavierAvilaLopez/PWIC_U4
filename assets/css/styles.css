@@ -23,6 +23,12 @@ body {
   padding-bottom: 60px;
 }
 
+main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem 2rem;
+}
+
 /* Header */
 
 header {
@@ -70,16 +76,17 @@ footer {
 
 /* Carrusel */
 .carrusel {
-  display: flex;
-  overflow-x: auto;
-  gap: 1rem;
-  padding: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+  padding: 1.5rem 0;
 }
 
 .carrusel img {
-  height: 200px;
-  flex-shrink: 0;
-  border-radius: 10px;
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  border-radius: 12px;
   transition: transform 0.3s;
 }
 
