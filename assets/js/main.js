@@ -1,28 +1,33 @@
 $(document).ready(function () {
-  // ------------------- INDEX -------------------
-  if ($('#carrusel').length) {
-    cargarCarrusel();
-  }
-
-  // ------------------ SEARCH -------------------
-  if ($('#busqueda-form').length) {
-    cargarRazas();
-
-    $('#raza').on('change', function () {
-      const raza = $(this).val();
-      if (raza) {
-        cargarSubrazas(raza);
-      } else {
-        $('#subraza').hide();
-      }
-    });
-
-    $('#busqueda-form').on('submit', function (e) {
-      e.preventDefault();
-      buscarImagenes();
-    });
-  }
+  inicializarLanding();
+  inicializarBuscador();
 });
+
+// ---------- Inicializaciones ----------
+function inicializarLanding() {
+  if (!$('#carrusel').length) return;
+  cargarCarrusel();
+}
+
+function inicializarBuscador() {
+  if (!$('#busqueda-form').length) return;
+
+  cargarRazas();
+
+  $('#raza').on('change', function () {
+    const razaSeleccionada = $(this).val();
+    if (razaSeleccionada) {
+      cargarSubrazas(razaSeleccionada);
+    } else {
+      $('#subraza').hide();
+    }
+  });
+
+  $('#busqueda-form').on('submit', function (event) {
+    event.preventDefault();
+    buscarImagenes();
+  });
+}
 
 // ---------- Funciones Landing ----------
 function cargarCarrusel() {
@@ -68,32 +73,121 @@ function cargarSubrazas(raza) {
     .fail(() => mostrarError('No se pudieron cargar las subrazas'));
 }
 
-function buscarImagenes() {
+async function buscarImagenes() {
   const raza = $('#raza').val();
   const subraza = $('#subraza').val();
-  const cantidad = parseInt($('#cantidad').val());
+  const cantidad = parseInt($('#cantidad').val(), 10);
 
-  $('#mensaje-error').text('');
+  limpiarErrores();
 
   if (!raza || !cantidad || cantidad <= 0) {
-    return mostrarError('Completa todos los campos correctamente');
+    mostrarError('Completa todos los campos correctamente');
+    return;
   }
 
-  let url = subraza
-    ? `https://dog.ceo/api/breed/${raza}/${subraza}/images/random/${cantidad}`
-    : `https://dog.ceo/api/breed/${raza}/images/random/${cantidad}`;
+  const construirUrl = cantidadSolicitada =>
+    subraza
+      ? `https://dog.ceo/api/breed/${raza}/${subraza}/images/random/${cantidadSolicitada}`
+      : `https://dog.ceo/api/breed/${raza}/images/random/${cantidadSolicitada}`;
 
-  $.get(url)
-    .done(function (data) {
-      const urls = [...new Set(data.message)]; // Elimina duplicados
-      $('#resultados').empty();
-      urls.forEach(img => {
-        $('#resultados').append(`<img src="${img}" alt="Perro">`);
-      });
-    })
-    .fail(() => mostrarError('Error al cargar imágenes de la API'));
+  try {
+    const { imagenesUnicas, sinMasResultados } = await obtenerImagenesUnicas(
+      cantidad,
+      construirUrl
+    );
+
+    const imagenesFinales = await completarConDuplicados(
+      imagenesUnicas,
+      cantidad,
+      sinMasResultados,
+      construirUrl
+    );
+
+    renderizarImagenes(imagenesFinales);
+  } catch (error) {
+    mostrarError('Error al cargar imágenes de la API');
+  }
+}
+
+async function obtenerImagenesUnicas(cantidad, construirUrl) {
+  const imagenes = new Set();
+  const maxIntentos = 10;
+  let intentos = 0;
+
+  while (imagenes.size < cantidad && intentos < maxIntentos) {
+    const faltantes = cantidad - imagenes.size;
+    const respuesta = await $.get(construirUrl(faltantes));
+    [].concat(respuesta.message).forEach(url => imagenes.add(url));
+    intentos++;
+  }
+
+  const sinMasResultados = intentos === maxIntentos && imagenes.size < cantidad;
+  return { imagenesUnicas: Array.from(imagenes), sinMasResultados };
+}
+
+async function completarConDuplicados(imagenesUnicas, cantidad, sinMasResultados, construirUrl) {
+  if (imagenesUnicas.length >= cantidad) {
+    return imagenesAncladas(imagenesUnicas, cantidad);
+  }
+
+  const faltantes = cantidad - imagenesUnicas.length;
+  const respuesta = await $.get(construirUrl(faltantes));
+  const adicionales = [].concat(respuesta.message).slice(0, faltantes);
+
+  if (sinMasResultados) {
+    return [...imagenesUnicas, ...adicionales];
+  }
+
+  const nuevasUnicas = [...imagenesUnicas, ...adicionales.filter(url => !imagenesUnicas.includes(url))];
+  if (nuevasUnicas.length >= cantidad) {
+    return imagenesAncladas(nuevasUnicas, cantidad);
+  }
+
+  return [...nuevasUnicas, ...imagenesAncladas(adicionales, cantidad - nuevasUnicas.length)];
+}
+
+function imagenesAncladas(imagenes, limite) {
+  return imagenes.slice(0, limite);
+}
+
+function renderizarImagenes(imagenes) {
+  $('#resultados').empty();
+  imagenes.forEach(img => {
+    $('#resultados').append(`<img src="${img}" alt="Perro">`);
+  });
+}
+
+function limpiarErrores() {
+  $('#mensaje-error').text('');
+  $('#mensaje-error-landing').remove();
 }
 
 function mostrarError(msg) {
-  $('#mensaje-error').text(msg);
+  const $mensajeError = $('#mensaje-error');
+
+  if ($mensajeError.length) {
+    $mensajeError.text(msg).attr('role', 'alert').show();
+    return;
+  }
+
+  const $fallback = $('#mensaje-error-landing');
+  if ($fallback.length) {
+    $fallback.text(msg).attr('role', 'alert').show();
+    return;
+  }
+
+  if ($('#carrusel').length) {
+    const $nuevoError = $('<div>', {
+      id: 'mensaje-error-landing',
+      class: 'error',
+      text: msg,
+      role: 'alert'
+    });
+    $('#carrusel').after($nuevoError);
+    return;
+  }
+
+  $('body').prepend(
+    `<div id="mensaje-error-landing" class="error" role="alert">${msg}</div>`
+  );
 }
